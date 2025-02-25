@@ -55,3 +55,7 @@ CMakeLists.txt.user
 *.swo
 *.DS_Store
 *.directory
+
+vcpkg_installed/
+
+
