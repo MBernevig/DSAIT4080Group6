@@ -157,7 +157,26 @@ glm::vec4 Renderer::traceRayMIP(const Ray& ray, float stepSize) const
 glm::vec4 Renderer::traceRayISO(const Ray& ray, float stepSize) const
 {
     static constexpr glm::vec3 isoColor { 0.8f, 0.8f, 0.2f };
-    return glm::vec4(isoColor, 1.0f);
+
+    glm::vec3 samplePos = ray.origin + ray.tmin * ray.direction;
+    const glm::vec3 increment = stepSize * ray.direction;
+    for (float t = ray.tmin; t <= ray.tmax; t += stepSize, samplePos += increment) {
+        const float val = m_pVolume->getSampleInterpolate(samplePos);
+        if (val > m_config.isoValue) {
+            // If bisection accuracy is enabled, calculate it
+            /*if (m_config.bisection) {
+                
+            }*/
+            // If volume shading is enabled, return the color with phong shading. Otherwise return the isoColor
+            if (m_config.volumeShading) {
+                //return computePhongShading(...)
+            } else {
+                return glm::vec4(isoColor, 1.0f);
+            }
+        }
+    }
+
+    return glm::vec4(0.0f,0.0f,0.0f,1.0f);
 }
 
 // ======= TODO: IMPLEMENT ========

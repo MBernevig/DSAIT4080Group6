@@ -42,6 +42,7 @@
 .idea/
 .vscode/
 *.code-workspace
+.vs/
 
 # CMake generated files
 CMakeFiles/
