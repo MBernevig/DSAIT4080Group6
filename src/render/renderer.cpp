@@ -206,9 +206,10 @@ glm::vec4 Renderer::traceRayComposite(const Ray& ray, float stepSize) const
     glm::vec4 accumulatedColor(0.0f); // RGBA color accumulator
     float alphaAccum = 0.0f; // Tracks accumulated opacity
 
-    for (float t = 0.0f; t <= ray.tmax; t += stepSize) {
-        glm::vec3 samplePos = ray.origin + ray.direction * t;
 
+    glm::vec3 samplePos = ray.origin + ray.tmin * ray.direction;
+    const glm::vec3 increment = stepSize * ray.direction;
+    for (float t = ray.tmin; t <= ray.tmax; t += stepSize, samplePos += increment) {
         // Sample the volume data
         float scalarValue = m_pVolume->getSampleInterpolate(samplePos);
 
