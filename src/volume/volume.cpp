@@ -124,7 +124,37 @@ float Volume::getSampleNearestNeighbourInterpolation(const glm::vec3& coord) con
 // This function returns the trilinear interpolated value at the continuous 3D position given by coord.
 float Volume::getSampleTriLinearInterpolation(const glm::vec3& coord) const
 {
-    return 0.0f;
+    int x0 = floor(coord.x);
+    int y0 = floor(coord.y);
+    int z0 = floor(coord.z);
+    int x1 = x0 + 1;
+    int y1 = y0 + 1;
+    int z1 = z0 + 1;
+
+    // check if the coordinate is within volume boundaries
+    if (x0 < 0 || y0 < 0 || z0 < 0 || x1 >= m_dim.x || y1 >= m_dim.y || z1 >= m_dim.z)
+        return 0.0f;
+
+    // get the voxels
+    float v000 = getVoxel(x0, y0, z0);
+    float v001 = getVoxel(x0, y0, z1);
+    float v010 = getVoxel(x0, y1, z0);
+    float v011 = getVoxel(x0, y1, z1);
+    float v100 = getVoxel(x1, y0, z0);
+    float v101 = getVoxel(x1, y0, z1);
+    float v110 = getVoxel(x1, y1, z0);
+    float v111 = getVoxel(x1, y1, z1);
+
+    // interpolate in the x direction, then y direction and z direction
+    float i00 = linearInterpolate(v000, v100, coord.x - x0);
+    float i01 = linearInterpolate(v001, v101, coord.x - x0);
+    float i10 = linearInterpolate(v010, v110, coord.x - x0);
+    float i11 = linearInterpolate(v011, v111, coord.x - x0);
+
+    float i0 = linearInterpolate(i00, i10, coord.y - y0);
+    float i1 = linearInterpolate(i01, i11, coord.y - y0);
+
+    return linearInterpolate(i0, i1, coord.z - z0);
 }
 
 // This function linearly interpolates the value at X using incoming values g0 and g1 given a factor (equal to the positon of x in 1D)
@@ -132,14 +162,35 @@ float Volume::getSampleTriLinearInterpolation(const glm::vec3& coord) const
 // g0--X--------g1
 //   factor
 float Volume::linearInterpolate(float g0, float g1, float factor)
-{
-    return 0.0f;
+{   
+    // linear interpolation between 2 values is the weighted sum between them
+    // this is equivalent to the formula: f(g0) * (1 - |factor - 0|) + f(g1) * (1 - |factor - 1|)
+    return (1 - factor) * g0 + factor * g1;
 }
 
 // This function bi-linearly interpolates the value at the given continuous 2D XY coordinate for a fixed integer z coordinate.
 float Volume::biLinearInterpolate(const glm::vec2& xyCoord, int z) const
 {
-    return 0.0f;
+    int x0 = floor(xyCoord.x);
+    int y0 = floor(xyCoord.y);
+    int x1 = x0 + 1;
+    int y1 = y0 + 1;
+
+    // check if the coordinate is within volume boundaries
+    if (x0 < 0 || y0 < 0 || x1 >= m_dim.x || y1 >= m_dim.y)
+        return 0.0f;
+
+    // get the voxels
+    float v00 = getVoxel(x0, y0, z);
+    float v01 = getVoxel(x0, y1, z);
+    float v10 = getVoxel(x1, y0, z);
+    float v11 = getVoxel(x1, y1, z);
+
+    // interpolate in the x direction and then in the y direction
+    float i0 = linearInterpolate(v00, v10, xyCoord.x - x0);
+    float i1 = linearInterpolate(v01, v11, xyCoord.x - x0);
+
+    return linearInterpolate(i0, i1, xyCoord.y - y0);
 }
 
 
