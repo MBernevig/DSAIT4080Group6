@@ -169,7 +169,8 @@ glm::vec4 Renderer::traceRayISO(const Ray& ray, float stepSize) const
             }*/
             // If volume shading is enabled, return the color with phong shading. Otherwise return the isoColor
             if (m_config.volumeShading) {
-                //return computePhongShading(...)
+                glm::vec3 V = m_pCamera->position();
+                return glm::vec4(computePhongShading(isoColor, m_pGradientVolume->getGradientInterpolate(samplePos), V, V), 1.0f);
             } else {
                 return glm::vec4(isoColor, 1.0f);
             }
