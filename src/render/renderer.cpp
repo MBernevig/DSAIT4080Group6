@@ -195,7 +195,7 @@ float Renderer::bisectionAccuracy(const Ray& ray, float t0, float t1, float isoV
 
 glm::vec3 Renderer::computePhongShading(const glm::vec3& color, const volume::GradientVoxel& gradient, const glm::vec3& L, const glm::vec3& V, float ambientCoefficient, float diffuseCoefficient, float specularCoefficient, int specularPower)
 {
-    return color * (ambientCoefficient + glm::dot(gradient.dir, -L) * diffuseCoefficient + glm::pow(glm::dot(V, glm::reflect(gradient.dir, L), specularPower) * specularCoefficient))
+    return color * glm::vec3(ambientCoefficient + glm::dot(gradient.dir, -L) * diffuseCoefficient + glm::pow(glm::dot(V, glm::reflect(gradient.dir, L)), specularPower) * specularCoefficient);
 }
 
 // ======= TODO: IMPLEMENT ========

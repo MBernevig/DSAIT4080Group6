@@ -115,7 +115,37 @@ GradientVoxel GradientVolume::getGradientNearestNeighbor(const glm::vec3& coord)
 // Use the linearInterpolate function that you implemented below.
 GradientVoxel GradientVolume::getGradientLinearInterpolate(const glm::vec3& coord) const
 {
-    return GradientVoxel {};
+    if (glm::any(glm::lessThan(coord, glm::vec3(0))) || glm::any(glm::greaterThanEqual(coord, glm::vec3(m_dim))))
+        return { glm::vec3(0.0f), 0.0f };
+
+    int x0 = static_cast<int>(coord.x);
+    int y0 = static_cast<int>(coord.y);
+    int z0 = static_cast<int>(coord.z);
+    int x1 = x0 + 1;
+    int y1 = y0 + 1;
+    int z1 = z0 + 1;
+    float fx = fmodf(coord.x, 1);
+    float fy = fmodf(coord.y, 1);
+    float fz = fmodf(coord.z, 1);
+
+    GradientVoxel v000 = getGradient(x0, y0, z0);
+    GradientVoxel v001 = getGradient(x0, y0, z1);
+    GradientVoxel v011 = getGradient(x0, y1, z1);
+    GradientVoxel v010 = getGradient(x0, y1, z0);
+    GradientVoxel v110 = getGradient(x1, y1, z0);
+    GradientVoxel v111 = getGradient(x1, y1, z1);
+    GradientVoxel v101 = getGradient(x1, y0, z1);
+    GradientVoxel v100 = getGradient(x1, y0, z0);
+
+    GradientVoxel v00 = linearInterpolate(v000, v001, fz);
+    GradientVoxel v01 = linearInterpolate(v010, v011, fz);
+    GradientVoxel v11 = linearInterpolate(v110, v111, fz);
+    GradientVoxel v10 = linearInterpolate(v100, v101, fz);
+
+    GradientVoxel v0 = linearInterpolate(v00, v01, fy);
+    GradientVoxel v1 = linearInterpolate(v10, v11, fy);
+
+    return linearInterpolate(v0, v1, fx);
 }
 
 // ======= TODO : IMPLEMENT ========
@@ -123,7 +153,7 @@ GradientVoxel GradientVolume::getGradientLinearInterpolate(const glm::vec3& coor
 // At t=0, linearInterpolate should return g0 and at t=1 it returns g1.
 GradientVoxel GradientVolume::linearInterpolate(const GradientVoxel& g0, const GradientVoxel& g1, float factor)
 {
-    return GradientVoxel {};
+    return { g0.dir * (1 - factor) + g1.dir * factor, g0.magnitude * (1 - factor) + g1.magnitude * factor };
 }
 
 // This function returns a gradientVoxel without using interpolation
