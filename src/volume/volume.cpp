@@ -77,8 +77,23 @@ std::string_view Volume::fileName() const
     return m_fileName;
 }
 
+int reflectIndex(int idx, int maxIdx)
+{
+    if (idx < 0)
+        return -idx; // Reflect negative index.
+    else if (idx > maxIdx)
+        return 2 * maxIdx - idx; // Reflect indices above the maximum.
+    return idx;
+}
+
+
 float Volume::getVoxel(int x, int y, int z) const
 {
+    x = reflectIndex(x, m_dim.x - 1);
+    y = reflectIndex(y, m_dim.y - 1);
+    z = reflectIndex(z, m_dim.z - 1);
+
+
     const size_t i = size_t(x + m_dim.x * (y + m_dim.y * z));
     return static_cast<float>(m_data[i]);
 }
@@ -196,30 +211,83 @@ float Volume::biLinearInterpolate(const glm::vec2& xyCoord, int z) const
 
 // ======= OPTIONAL : This functions can be used to implement cubic interpolation ========
 // This function represents the h(x) function, which returns the weight of the cubic interpolation kernel for a given position x
+
+// As per https://en.wikipedia.org/wiki/Bicubic_interpolation 
 float Volume::weight(float x)
 {
-    return 0.0f;
+    float alpha = -0.5;
+
+    float abs_x = abs(x);
+
+    if (abs_x <= 1)
+    {
+        return (alpha + 2) * (abs_x * abs_x * abs_x) - (alpha + 3) * (abs_x * abs_x) + 1;
+    }
+    else if (abs_x < 2)
+    {
+        return (alpha) * (abs_x * abs_x * abs_x) - 5 * (alpha) * (abs_x * abs_x) + 8 * (alpha) * (abs_x) - 4 * alpha;
+    } else {
+        return 0;
+    }
+
+    return 0;
 }
 
 // ======= OPTIONAL : This functions can be used to implement cubic interpolation ========
 // This functions returns the results of a cubic interpolation using 4 values and a factor
 float Volume::cubicInterpolate(float g0, float g1, float g2, float g3, float factor)
 {
-    return 0.0f;
+    // C0 - C1 - SamplePos - C2 - C3
+    return g0 * weight(factor + 1.0f) + g1 * weight(factor) + g2 * weight(factor - 1.0f) + g3 * weight(factor - 2.0f);
 }
 
 // ======= OPTIONAL : This functions can be used to implement cubic interpolation ========
 // This function returns the value of a bicubic interpolation
 float Volume::biCubicInterpolate(const glm::vec2& xyCoord, int z) const
 {
-    return 0.0f;
+    // Determine the base coordinates and fractional offsets:
+    int x = static_cast<int>(std::floor(xyCoord.x));
+    int y = static_cast<int>(std::floor(xyCoord.y));
+    float dx = xyCoord.x - x;
+    float dy = xyCoord.y - y;
+    // Interpolate along the x-axis for 4 rows in the neighborhood:
+    float col[4];
+    for (int j = -1; j <= 2; j++) {
+        float row[4];
+        for (int i = -1; i <= 2; i++) {
+            // Retrieve voxel values from the volume.
+            row[i + 1] = getVoxel(x + i, y + j, z);
+        }
+        col[j + 1] = cubicInterpolate(row[0], row[1], row[2], row[3], dx);
+    }
+
+    // Interpolate along the y-axis using the weighted contributions:
+    return cubicInterpolate(col[0], col[1], col[2], col[3], dy);
 }
 
 // ======= OPTIONAL : This functions can be used to implement cubic interpolation ========
 // This function computes the tricubic interpolation at coord
 float Volume::getSampleTriCubicInterpolation(const glm::vec3& coord) const
 {
-    return 0.0f;
+    // Determine the base coordinates and fractional offsets:
+    int x = static_cast<int>(std::floor(coord.x));
+    int y = static_cast<int>(std::floor(coord.y));
+    int z = static_cast<int>(std::floor(coord.z));
+    float dx = coord.x - x;
+    float dy = coord.y - y;
+
+
+    float dz = coord.z - z;
+
+    // Perform bicubic interpolation on 4 slices (z direction):
+    float slab[4];
+    for (int k = -1; k <= 2; k++) {
+        // Bug when z == 0 
+        slab[k + 1] = biCubicInterpolate(glm::vec2(coord.x, coord.y), z + k);
+    }
+
+    // Interpolate along the z-axis using the weight-based cubic interpolation:
+    return cubicInterpolate(slab[0], slab[1], slab[2], slab[3], dz);
 }
 
 // Load an fld volume data file
