@@ -169,8 +169,8 @@ glm::vec4 Renderer::traceRayISO(const Ray& ray, float stepSize) const
             }*/
             // If volume shading is enabled, return the color with phong shading. Otherwise return the isoColor
             if (m_config.volumeShading) {
-                glm::vec3 V = m_pCamera->position();
-                return glm::vec4(computePhongShading(isoColor, m_pGradientVolume->getGradientInterpolate(samplePos), V, V), 1.0f);
+                glm::vec3 V = glm::normalize(samplePos - m_pCamera->position());
+                return glm::vec4(computePhongShading(isoColor, m_pGradientVolume->getGradientInterpolate(samplePos), -V, V), 1.0f);
             } else {
                 return glm::vec4(isoColor, 1.0f);
             }
@@ -196,7 +196,7 @@ float Renderer::bisectionAccuracy(const Ray& ray, float t0, float t1, float isoV
 
 glm::vec3 Renderer::computePhongShading(const glm::vec3& color, const volume::GradientVoxel& gradient, const glm::vec3& L, const glm::vec3& V, float ambientCoefficient, float diffuseCoefficient, float specularCoefficient, int specularPower)
 {
-    return color * glm::vec3(ambientCoefficient + glm::dot(gradient.dir, -L) * diffuseCoefficient + glm::pow(glm::dot(V, glm::reflect(gradient.dir, L)), specularPower) * specularCoefficient);
+    return color * (ambientCoefficient + glm::dot(glm::normalize(gradient.dir), -L) * diffuseCoefficient + (float)glm::pow(glm::dot(V, glm::reflect(glm::normalize(gradient.dir), L)), specularPower) * specularCoefficient);
 }
 
 // ======= TODO: IMPLEMENT ========
