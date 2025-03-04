@@ -164,9 +164,10 @@ glm::vec4 Renderer::traceRayISO(const Ray& ray, float stepSize) const
         const float val = m_pVolume->getSampleInterpolate(samplePos);
         if (val > m_config.isoValue) {
             // If bisection accuracy is enabled, calculate it
-            /*if (m_config.bisection) {
-                
-            }*/
+            if (m_config.bisection) {
+                float precise_t = bisectionAccuracy(ray, t - stepSize, t, m_config.isoValue);
+                samplePos = ray.origin + precise_t * ray.direction;
+            }
             // If volume shading is enabled, return the color with phong shading. Otherwise return the isoColor
             if (m_config.volumeShading) {
                 glm::vec3 V = glm::normalize(samplePos - m_pCamera->position());
@@ -186,7 +187,32 @@ glm::vec4 Renderer::traceRayISO(const Ray& ray, float stepSize) const
 // iterations such that it does not get stuck in degerate cases.
 float Renderer::bisectionAccuracy(const Ray& ray, float t0, float t1, float isoValue) const
 {
-    return 0.0f;
+    const float ITER_LIMIT = 500;
+
+    float t = t0;
+    float step = (t1 - t0) / 2; // We begin with dividing by two since a full step has already been made
+    float num_iters = 0;
+    glm::vec3 samplePos = ray.origin + t * ray.direction;
+    float val = m_pVolume->getSampleInterpolate(samplePos);
+
+    // Iterate until the difference between the iso value and the sampled value is less than 0.01, or until
+    // the maximum number of iterations is reached
+    while (glm::abs(val - isoValue) > 0.01 && num_iters < ITER_LIMIT) {
+        // Take a step to get closer to isoValue
+        if (val > isoValue)
+            t -= step;
+        else
+            t += step;
+
+        // Update samplePos and val according to new t
+        samplePos = ray.origin + t * ray.direction;
+        val = m_pVolume->getSampleInterpolate(samplePos);
+
+        step = step / 2;
+        num_iters += 1;
+    }
+
+    return t;
 }
 
 // ======= TODO: IMPLEMENT ========
