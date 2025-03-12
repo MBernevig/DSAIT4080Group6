@@ -30,13 +30,13 @@
 *.temp
 
 # Build directories
-/build/
-/bin/
-/lib/
-/log/
-/logs/
-/target/
-/out/
+*/build/
+*/bin/
+*/lib/
+*/log/
+*/logs/
+*/target/
+*/out/
 
 # IDE specific files
 .idea/
@@ -57,6 +57,6 @@ volume data
 *.DS_Store
 *.directory
 
-vcpkg_installed/
+*/vcpkg_installed/
 
 
