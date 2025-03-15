@@ -70,7 +70,7 @@ void GPUVolume::updateMinMax()
     std::chrono::steady_clock::time_point start = clock::now();
 
     // ======= TODO: calculate m_indexVolumeSize  based on volume dimensions and m_brickSize
-    m_indexVolumeSize = glm::vec3(1);
+    m_indexVolumeSize = (m_volumeDims + m_brickSize - 1) / m_brickSize;
 
     // the number of bricks
     int numBricksLinear = m_indexVolumeSize.x * m_indexVolumeSize.y * m_indexVolumeSize.z;
@@ -78,7 +78,34 @@ void GPUVolume::updateMinMax()
     m_minMaxValues.resize(numBricksLinear);
 
     // ======= TODO: replace this and calculate all actual min max values
-    m_minMaxValues[0] = glm::vec2(0.0f, m_pVolume->maximum());
+    for (int i = 0; i < m_indexVolumeSize.x; i++) {
+        for (int j = 0; j < m_indexVolumeSize.y; j++) {
+            for (int k = 0; k < m_indexVolumeSize.z; k++) {
+                glm::ivec3 brickOrigin = glm::ivec3(i * m_brickSize - m_brickPadding, j * m_brickSize - m_brickPadding, k * m_brickSize - m_brickPadding);
+                glm::ivec3 brickEnd = glm::ivec3(i * m_brickSize + m_brickSize + m_brickPadding, j * m_brickSize + m_brickSize + m_brickPadding, k * m_brickSize + m_brickSize + m_brickPadding);
+
+                brickEnd = glm::min(brickEnd, m_volumeDims);
+                brickOrigin = glm::max(brickOrigin, glm::ivec3(0));
+
+                float min = std::numeric_limits<float>::max();
+                float max = std::numeric_limits<float>::min();
+
+                for (int x = brickOrigin.x; x < brickEnd.x; x++) {
+                    for (int y = brickOrigin.y; y < brickEnd.y; y++) {
+                        for (int z = brickOrigin.z; z < brickEnd.z; z++) {
+                            float value = m_pVolume->getVoxel(x, y, z);
+                            min = glm::min(min, value);
+                            max = glm::max(max, value);
+                        }
+                    }
+                }
+
+                int index = i + j * m_indexVolumeSize.x + k * m_indexVolumeSize.x * m_indexVolumeSize.y;
+                m_minMaxValues[index] = glm::vec2(min, max);
+            }
+        }
+    }
+
     // stop the timer
     using clock = std::chrono::steady_clock;
     std::chrono::steady_clock::time_point stop = clock::now();
@@ -152,8 +179,33 @@ glm::ivec3 GPUVolume::findOptimalDimensions(int N)
     using clock = std::chrono::steady_clock;
     std::chrono::steady_clock::time_point start = clock::now();
 
+    glm::ivec3 maxSize = m_volumeTexture.getDims() / glm::ivec3(m_brickSize + 2 * m_brickPadding);
+
     // TODO: calculate the optimal dimensions for the cache volume here
     glm::ivec3 optimalDimensions = glm::vec3(1, 1, 1);
+
+    int bestEmpty = N;
+    glm::ivec3 optimalDimensions = glm::ivec3(0);
+    for (int x = 1; x <= maxSize.x; x++) {
+        for (int y = 1; y <= maxSize.y; y++) {
+            int z = (N + x * y - 1) / x * y;
+            if (z > maxSize.z) {
+                continue;
+            }
+
+            int total = x * y * z;
+            int empty = total - N;
+
+            if (empty < bestEmpty) {
+                bestEmpty = empty;
+                optimalDimensions = glm::ivec3(x, y, z);
+
+                if (empty == 0) {
+                    break;
+                }
+            }
+        }
+    }
 
     // stop the timer
     using clock = std::chrono::steady_clock;
